@@ -38,9 +38,7 @@ public class Program
             //    EnableDeliveryReports = false
             //};
 
-            services.AddSingleton(new KafkaProducer<InformationMessage>(producerConfig));
-            services.AddSingleton(new KafkaProducer<MessageBroker.Kafka.Contract.Models.LogMessage>(producerConfig));
-            services.AddSingleton(new KafkaProducer<ExceptionMessage>(producerConfig));
+            services.AddSingleton(new KafkaProducer(producerConfig));
 
             services.AddHostedService<Worker>();
         });

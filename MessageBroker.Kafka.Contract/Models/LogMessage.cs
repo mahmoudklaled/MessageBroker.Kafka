@@ -1,13 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace MessageBroker.Kafka.Contract.Models
+﻿namespace MessageBroker.Kafka.Contract.Models
 {
-    public class LogMessage
+    public sealed class LogMessage : Message
     {
         public string Message { get; set; }
+
+        public LogMessage()
+        {
+            MessageType = nameof(LogMessage);
+        }
     }
 }
