@@ -23,11 +23,8 @@ public class Program
                     EnableAutoCommit = true, // Ensure auto-commit is enabled
                     AutoCommitIntervalMs = 5000 // Commit offsets every 5 seconds
                 };
-
-                services.AddSingleton(new KafkaConsumer<InformationMessage>(consumerConfig, Topics.Information.ToString()));
-                services.AddSingleton(new KafkaConsumer<MessageBroker.Kafka.Contract.Models.LogMessage>(consumerConfig, Topics.Logs.ToString()));
-                services.AddSingleton(new KafkaConsumer<ExceptionMessage>(consumerConfig, Topics.Exception.ToString()));
-
+                
+                services.AddSingleton(new KafkaConsumer<Message>(consumerConfig, Topics.All.ToString()));
                 services.AddHostedService<Worker>();
             });
 }

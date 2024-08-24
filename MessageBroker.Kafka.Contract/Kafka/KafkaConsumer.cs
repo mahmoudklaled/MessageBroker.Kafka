@@ -1,56 +1,65 @@
 ﻿using Confluent.Kafka;
 using MessageBroker.Kafka.Contract.Models;
 using MessageBroker.Kafka.Contract.Serializer;
-using Newtonsoft.Json;
 
 namespace MessageBroker.Kafka.Contract.Kafka
 {
-    public class KafkaConsumer<T> : IDisposable
+    public class KafkaConsumer<T> : IDisposable where T : Message
     {
-        private readonly IConsumer<string, Message<T>> _consumer;
+        private readonly IConsumer<string, T> _consumer;
+        private Action<T> _handleMethod;
         private bool _disposed = false;
 
         public KafkaConsumer(ConsumerConfig config, string topic)
         {
-            _consumer = new ConsumerBuilder<string, Message<T>>(config)
+            _consumer = new ConsumerBuilder<string, T>(config)
                 .SetValueDeserializer(new MessageDeserializer<T>())
                 .Build();
 
             _consumer.Subscribe(topic);
+            
         }
 
-        public void Consume(CancellationToken cancellationToken)
+        public void Consume(CancellationToken cancellationToken, Action<T> handleMethod = null)
         {
             try
             {
+                _handleMethod = handleMethod;
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    var consumeResult = _consumer.Consume(cancellationToken);
-
-                    if (consumeResult != null)
+                    try
                     {
-                        var message = consumeResult.Message.Value;
-                        Console.WriteLine($"Consumed message with ID: {message.Id} at {consumeResult.TopicPartitionOffset}");
+                        var consumeResult = _consumer.Consume(cancellationToken);
 
-                        // Process the message here
-                        HandleMessage(message);
+                        if (consumeResult != null)
+                        {
+                            var message = consumeResult.Message.Value;
+                            Console.WriteLine($"Consumed message with ID: {message.Id} at {consumeResult.TopicPartitionOffset}");
+
+                            // Process the message here
+                            HandleMessage(message);
+                        }
+                    }
+                    catch (ConsumeException ex)
+                    {
+                        Console.WriteLine($"Error occurred: {ex.Error.Reason}");
                     }
                 }
             }
-            catch (ConsumeException e)
+            catch (Exception e)
             {
-                Console.WriteLine($"Error occurred: {e.Error.Reason}");
+                Console.WriteLine($"Error occurred: {e.Message}");
             }
         }
-        public void Close()
+
+        private void HandleMessage(T message)
         {
-            _consumer.Close();  // Gracefully shuts down the consumer
+            _handleMethod?.Invoke(message);
         }
 
-        private void HandleMessage(Message<T> message)
+        public void Close()
         {
-            // Implement your message processing logic here
-            Console.WriteLine($"Processing message: {JsonConvert.SerializeObject(message)}");
+            _consumer.Close(); 
         }
 
         public void Dispose()
@@ -77,4 +86,6 @@ namespace MessageBroker.Kafka.Contract.Kafka
             Dispose(false);
         }
     }
+
+
 }

@@ -3,6 +3,7 @@
 
     public enum Topics
     {
+        All,
         Information,
         Logs,
         Exception,

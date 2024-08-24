@@ -7,17 +7,12 @@ namespace MessageBroker.Kafka.Producer.Simulator
     public class Worker : BackgroundService
     {
         private readonly ILogger<Worker> _logger;
-        private readonly KafkaProducer<InformationMessage> _informationProducer;
-        private readonly KafkaProducer<LogMessage> _logProducer;
-        private readonly KafkaProducer<ExceptionMessage> _exceptionProducer;
+        private readonly KafkaProducer _kafkaProducer;
 
-        public Worker(ILogger<Worker> logger, KafkaProducer<InformationMessage> informationProducer,
-        KafkaProducer<LogMessage> logProducer, KafkaProducer<ExceptionMessage> exceptionProducer)
+        public Worker(ILogger<Worker> logger, KafkaProducer informationProducer)
         {
             _logger = logger;
-            _informationProducer = informationProducer;
-            _logProducer = logProducer;
-            _exceptionProducer = exceptionProducer;
+            _kafkaProducer = informationProducer;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -25,8 +20,8 @@ namespace MessageBroker.Kafka.Producer.Simulator
             // Simulate producing messages on the same topic
             var tasks = new List<Task>
                 {
-                    ProduceMessagesOnSingleTopic(stoppingToken),
-                    ProduceMessagesOnMultipleTopics(stoppingToken)
+                    ProduceInformationMessages(stoppingToken),
+                    ProduceDifferentMessages(stoppingToken)
                 };
 
             await Task.WhenAll(tasks);
@@ -37,49 +32,44 @@ namespace MessageBroker.Kafka.Producer.Simulator
 
             await base.StopAsync(stoppingToken);
         }
-
-        private async Task ProduceMessagesOnSingleTopic(CancellationToken stoppingToken)
+        private async Task ProduceInformationMessages(CancellationToken stoppingToken)
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                var message = new Message<InformationMessage>(new InformationMessage
+                var message = new InformationMessage
                 {
-                    Level= InformationLevel.Medium,
-                    Message= "Testing Message"
-                });
-                await _informationProducer.ProduceAsync(Topics.Information, message);
+                    Level = InformationLevel.Medium,
+                    Message = "Testing Message"
+                };
+                await _kafkaProducer.ProduceAsync(Topics.All, message);
 
-                // Simulate high rate
                 await Task.Delay(TimeSpan.FromMilliseconds(10), stoppingToken);
             }
         }
 
-        private async Task ProduceMessagesOnMultipleTopics(CancellationToken stoppingToken)
+        private async Task ProduceDifferentMessages(CancellationToken stoppingToken)
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                // Produce to Information topic
-                var informationMessage = new Message<InformationMessage> (new InformationMessage
+                var informationMessage = new InformationMessage
                 {
                     Level = InformationLevel.Medium,
-                    Message = "Testing Message"
-                });
-                await _informationProducer.ProduceAsync(Topics.Information, informationMessage);
+                    Message = "Information Message"
+                };
+                await _kafkaProducer.ProduceAsync(Topics.All, informationMessage);
 
-                // Produce to Logs topic
-                var logMessage = new Message<LogMessage>(new LogMessage {
+                var logMessage = new LogMessage
+                {
                     Message = "Log Message"
-                });
-                await _logProducer.ProduceAsync(Topics.Logs, logMessage);
+                };
+                await _kafkaProducer.ProduceAsync(Topics.All, logMessage);
 
-                // Produce to Exception topic
-                var exceptionMessage = new Message<ExceptionMessage>(new ExceptionMessage
+                var exceptionMessage = new ExceptionMessage
                 {
                     Message = "Exception Message"
-                });
-                await _exceptionProducer.ProduceAsync(Topics.Exception, exceptionMessage);
+                };
+                await _kafkaProducer.ProduceAsync(Topics.All, exceptionMessage);
 
-                // Simulate high rate
                 await Task.Delay(TimeSpan.FromMilliseconds(10), stoppingToken);
             }
         }
